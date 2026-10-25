@@ -75,7 +75,7 @@ public class AdminMenu {
             return;
         }
 
-        boolean existsInPending = pendingUsers.stream().anyMatch(u -> u.userId() == targetId);
+        boolean existsInPending = pendingUsers.stream().anyMatch(u -> u.id() == targetId);
         if (!existsInPending) {
             System.out.println("❌ Error: User ID " + targetId + " was not found in the pending list.");
             return;
@@ -105,7 +105,7 @@ public class AdminMenu {
 
         for (User user : users) {
             System.out.printf(format,
-                    user.userId(),
+                    user.id(),
                     user.username(),
                     user.role(),
                     user.status()
