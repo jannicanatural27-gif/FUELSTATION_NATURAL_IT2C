@@ -1,17 +1,21 @@
 package com.scc.ui;
 
+import com.scc.dao.ActivityLogDao;
 import com.scc.dao.UserDao;
+import com.scc.model.ActivityLog;
 import com.scc.model.User;
 import java.util.List;
 import java.util.Scanner;
 
 public class AdminMenu {
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
     private final Scanner scanner;
     private final User currentAdmin;
 
     public AdminMenu(UserDao userDao, Scanner scanner, User currentAdmin) {
         this.userDao = userDao;
+        this.activityLogDao = new ActivityLogDao();
         this.scanner = scanner;
         this.currentAdmin = currentAdmin;
     }
@@ -25,7 +29,8 @@ public class AdminMenu {
             System.out.println("[2] View Pending Registrations");
             System.out.println("[3] Approve User Account");
             System.out.println("[4] Update User Role and Status");
-            System.out.println("[5] Logout");
+            System.out.println("[5] View System Audit Logs");
+            System.out.println("[6] Logout");
             System.out.print("Select an option: ");
 
             String choice = scanner.nextLine().trim();
@@ -35,7 +40,8 @@ public class AdminMenu {
                 case "2" -> displayPendingUsers();
                 case "3" -> handleUserApproval();
                 case "4" -> handleUserUpdate();
-                case "5" -> {
+                case "5" -> handleAuditLogs();
+                case "6" -> {
                     System.out.println("Logging out from Admin dashboard...");
                     return;
                 }
@@ -78,6 +84,7 @@ public class AdminMenu {
         boolean success = userDao.approveUser(targetId);
         if (success) {
             System.out.println("✅ Success! User ID " + targetId + " has been APPROVED.");
+            activityLogDao.logAction(currentAdmin.id(), "USER_APPROVED", "Admin " + currentAdmin.username() + " approved account for User ID " + targetId);
         } else {
             System.out.println("❌ Failed to approve user account.");
         }
@@ -120,9 +127,41 @@ public class AdminMenu {
         boolean success = userDao.updateUserRoleAndStatus(targetId, newRole, newStatus);
         if (success) {
             System.out.println("✅ Success! User ID " + targetId + " updated to Role: " + newRole + ", Status: " + newStatus);
+            activityLogDao.logAction(currentAdmin.id(), "USER_UPDATED", "Admin " + currentAdmin.username() + " changed role of User " + targetId + " to " + newRole + " and status to " + newStatus);
         } else {
             System.out.println("❌ Failed to update user profile.");
         }
+    }
+
+    private void handleAuditLogs() {
+        while (true) {
+            System.out.println("\n=================================");
+            System.out.println("       SYSTEM AUDIT LOGS         ");
+            System.out.println("=================================");
+            System.out.println("[1] View All System Logs");
+            System.out.println("[2] Filter Logs by User ID");
+            System.out.println("[3] Return to Admin Dashboard");
+            System.out.print("Select an option: ");
+
+            String choice = scanner.nextLine().trim();
+            switch (choice) {
+                case "1" -> displayAllLogs();
+                case "2" -> displayFilteredLogs();
+                case "3" -> { return; }
+                default -> System.out.println("⚠️ Invalid choice. Try again.");
+            }
+        }
+    }
+
+    private void displayAllLogs() {
+        List<ActivityLog> logs = activityLogDao.getAllLogs();
+        printLogTable(logs, "ALL SYSTEM AUDIT LOGS");
+    }
+
+    private void displayFilteredLogs() {
+        int userId = readIntInput("Enter User ID to filter: ");
+        List<ActivityLog> logs = activityLogDao.getLogsByUserId(userId);
+        printLogTable(logs, "AUDIT LOGS FOR USER ID: " + userId);
     }
 
     // Input Validation Wrappers
@@ -148,7 +187,7 @@ public class AdminMenu {
             if (role.equals("ADMIN") || role.equals("RESIDENT") || role.equals("ATTENDANT") || role.equals("STUDENT") || role.equals("TEACHER")) {
                 return role;
             }
-            System.out.println("❌ Invalid role. Please choose a valid role (e.g., ADMIN, RESIDENT, ATTENDANT).");
+            System.out.println("❌ Invalid role. Please choose a valid role.");
         }
     }
 
@@ -186,6 +225,32 @@ public class AdminMenu {
                     user.username(),
                     user.role(),
                     user.status()
+            );
+        }
+        System.out.println(border);
+    }
+
+    private void printLogTable(List<ActivityLog> logs, String title) {
+        System.out.println("\n--- " + title + " ---");
+        if (logs.isEmpty()) {
+            System.out.println("No log records found.");
+            return;
+        }
+
+        String format = "%-5s | %-8s | %-18s | %-35s | %-20s%n";
+        String border = "----------------------------------------------------------------------------------------------------";
+
+        System.out.println(border);
+        System.out.printf(format, "ID", "USER_ID", "ACTION TYPE", "DESCRIPTION", "TIMESTAMP");
+        System.out.println(border);
+
+        for (ActivityLog log : logs) {
+            System.out.printf(format,
+                    log.logId(),
+                    log.userId(),
+                    log.actionType(),
+                    log.description(),
+                    log.timestamp()
             );
         }
         System.out.println(border);

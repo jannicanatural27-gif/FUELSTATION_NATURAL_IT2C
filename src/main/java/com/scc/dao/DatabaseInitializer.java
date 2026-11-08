@@ -39,14 +39,26 @@ public class DatabaseInitializer {
             );
             """;
 
+        String createActivityLogsTable = """
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            """;
+
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(createUsersTable);
             stmt.execute(createFuelInventoryTable);
             stmt.execute(createTransactionsTable);
+            stmt.execute(createActivityLogsTable);
 
-            System.out.println("✅ [DatabaseInitializer] Database initialized successfully.");
+            System.out.println("✅ [DatabaseInitializer] Database & Activity Logs initialized successfully.");
         } catch (SQLException e) {
             System.err.println("❌ [DatabaseInitializer] Initialization failed: " + e.getMessage());
             e.printStackTrace();
